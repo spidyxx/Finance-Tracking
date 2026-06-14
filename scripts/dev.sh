@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run Node tooling inside a container via podman — no Node install on the host.
 #
-#   scripts/dev.sh install            # npm ci / install
+#   scripts/dev.sh install            # install deps + generate Prisma client
 #   scripts/dev.sh dev                # next dev on http://0.0.0.0:3000 (LAN)
 #   scripts/dev.sh build              # next build
 #   scripts/dev.sh prisma <args...>   # e.g. prisma migrate dev --name init
@@ -10,10 +10,19 @@
 #   scripts/dev.sh shell              # interactive shell
 set -euo pipefail
 
-IMAGE="docker.io/library/node:22-slim"
+# Local dev image: node + openssl (Prisma needs openssl at runtime to pick the
+# correct query engine). Built from Dockerfile.dev on first use.
+DEV_IMAGE="localhost/finance-tracker-dev:latest"
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Persist npm cache between runs for faster installs.
 CACHE_VOL="finance-tracker-npm-cache"
+
+ensure_image() {
+  if ! podman image exists "$DEV_IMAGE"; then
+    echo "[dev.sh] Building dev image ($DEV_IMAGE)…" >&2
+    podman build -t "$DEV_IMAGE" -f "$PROJECT_DIR/Dockerfile.dev" "$PROJECT_DIR" >&2
+  fi
+}
 
 run() {
   # Note: we deliberately do NOT use --env-file. podman doesn't strip quotes
@@ -26,30 +35,31 @@ run() {
     "$@"
 }
 
+ensure_image
 cmd="${1:-}"; shift || true
 
 case "$cmd" in
   install)
-    run "$IMAGE" sh -c 'apt-get update -y >/dev/null && apt-get install -y openssl >/dev/null && npm install'
+    run "$DEV_IMAGE" sh -c 'npm install && npx prisma generate'
     ;;
   dev)
     # Publish 3000 and bind Next to 0.0.0.0 so it is reachable on the LAN.
-    run -p 3000:3000 "$IMAGE" sh -c 'npm run dev -- -H 0.0.0.0 -p 3000'
+    run -p 3000:3000 "$DEV_IMAGE" sh -c 'npm run dev -- -H 0.0.0.0 -p 3000'
     ;;
   build)
-    run "$IMAGE" sh -c 'apt-get update -y >/dev/null && apt-get install -y openssl >/dev/null && npx prisma generate && npm run build'
+    run "$DEV_IMAGE" sh -c 'npx prisma generate && npm run build'
     ;;
   prisma)
-    run "$IMAGE" sh -c 'apt-get update -y >/dev/null && apt-get install -y openssl >/dev/null && npx prisma "$@"' _ "$@"
+    run "$DEV_IMAGE" sh -c 'npx prisma "$@"' _ "$@"
     ;;
   npm)
-    run "$IMAGE" npm "$@"
+    run "$DEV_IMAGE" npm "$@"
     ;;
   exec)
-    run "$IMAGE" "$@"
+    run "$DEV_IMAGE" "$@"
     ;;
   shell)
-    run "$IMAGE" bash
+    run "$DEV_IMAGE" bash
     ;;
   *)
     grep '^#' "$0" | sed 's/^# \{0,1\}//'
