@@ -1,0 +1,34 @@
+# Deployment for Unraid. Connects to the EXISTING Postgres container — this
+# compose does NOT run its own database. Put real secrets in a .env file next
+# to this compose (Unraid: the container's env vars), never in git.
+#
+# Build the image on the dev host with podman, e.g.:
+#   podman build -t finance-tracker:latest .
+# then deploy this stack on Unraid.
+
+services:
+  finance-tracker:
+    image: finance-tracker:latest
+    container_name: finance-tracker
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      SESSION_SECRET: ${SESSION_SECRET}
+      APP_PASSWORD_HASH: ${APP_PASSWORD_HASH}
+      MCP_API_KEY: ${MCP_API_KEY}
+      PORT: "3000"
+      MCP_PORT: "3001"
+    ports:
+      - "3000:3000" # web UI (LAN-only)
+      # MCP HTTP endpoint (LAN-only) — enabled once mcp/server.ts ships.
+      # - "3001:3001"
+    networks:
+      - finance
+
+# Attach to the network your existing Postgres container is on so the app can
+# reach it by service/container name. Adjust the external network name to match
+# your setup (e.g. the bridge your Postgres container uses on Unraid).
+networks:
+  finance:
+    external: true
+    name: finance-net
