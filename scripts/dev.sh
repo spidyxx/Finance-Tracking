@@ -16,11 +16,13 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CACHE_VOL="finance-tracker-npm-cache"
 
 run() {
+  # Note: we deliberately do NOT use --env-file. podman doesn't strip quotes
+  # from env-file values, which would corrupt a quoted DATABASE_URL. Next.js
+  # and Prisma both auto-load .env from the mounted project dir instead.
   podman run --rm -it \
     -v "$PROJECT_DIR":/app:Z \
     -v "$CACHE_VOL":/root/.npm \
     -w /app \
-    --env-file "$PROJECT_DIR/.env" \
     "$@"
 }
 
