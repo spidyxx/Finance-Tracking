@@ -30,6 +30,7 @@
     "react-dom": "19.1.0",
     "react-hook-form": "^7.79.0",
     "recharts": "^3.8.1",
+    "rotating-file-stream": "^3.2.9",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3"
   },
