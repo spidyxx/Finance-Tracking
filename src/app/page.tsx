@@ -4,6 +4,7 @@ import {
   getMonthlySummary,
   type CategorySummary,
 } from "@/services/summary";
+import { getUpcoming, type UpcomingItem } from "@/services/recurring";
 import { formatEuros } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
@@ -32,9 +33,10 @@ export default async function DashboardPage({
   const monthParam = Array.isArray(sp.month) ? sp.month[0] : sp.month;
   const { year, month } = parseMonth(monthParam);
 
-  const [accounts, summary] = await Promise.all([
+  const [accounts, summary, upcoming] = await Promise.all([
     listAccountsWithBalances(),
     getMonthlySummary(year, month),
+    getUpcoming(30),
   ]);
 
   const netWorthCents = accounts.reduce((sum, a) => sum + a.balanceCents, 0);
@@ -88,6 +90,8 @@ export default async function DashboardPage({
           </div>
         )}
       </section>
+
+      {upcoming.length > 0 && <Upcoming items={upcoming} />}
 
       {/* Monthly breakdown */}
       <section className="flex flex-col gap-3">
@@ -161,6 +165,55 @@ function Stat({
         {formatEuros(cents)}
       </p>
     </div>
+  );
+}
+
+function Upcoming({ items }: { items: UpcomingItem[] }) {
+  const shown = items.slice(0, 12);
+  return (
+    <section className="rounded-lg border border-gray-200 bg-white p-4">
+      <h2 className="mb-3 text-sm font-medium text-gray-500">
+        Upcoming (next 30 days)
+      </h2>
+      <ul className="flex flex-col divide-y divide-gray-100">
+        {shown.map((it, i) => {
+          const [y, m, d] = it.date.split("-");
+          const sign =
+            it.type === "Income" ? "+" : it.type === "Expense" ? "−" : "⇄";
+          const color =
+            it.type === "Income"
+              ? "text-green-600"
+              : it.type === "Expense"
+                ? "text-gray-900"
+                : "text-gray-500";
+          return (
+            <li
+              key={it.ruleId + i}
+              className="flex items-center justify-between gap-3 py-2 text-sm"
+            >
+              <div className="min-w-0 truncate">
+                <span className="text-gray-500">
+                  {d}.{m}.{y}
+                </span>{" "}
+                {it.accountName} · {it.label}
+                {it.details ? (
+                  <span className="text-gray-400"> · {it.details}</span>
+                ) : null}
+              </div>
+              <span className={`whitespace-nowrap font-medium ${color}`}>
+                {sign}
+                {formatEuros(it.amountCents)}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {items.length > shown.length && (
+        <p className="mt-2 text-xs text-gray-400">
+          +{items.length - shown.length} more
+        </p>
+      )}
+    </section>
   );
 }
 

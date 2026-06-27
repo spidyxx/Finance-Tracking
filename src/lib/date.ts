@@ -16,3 +16,9 @@ export function formatDate(d: Date): string {
 export function isoDateToUTC(iso: string): Date {
   return new Date(`${iso}T00:00:00.000Z`);
 }
+
+/** Today as a UTC date-only value (midnight UTC). */
+export function todayUTC(): Date {
+  const n = new Date();
+  return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()));
+}
