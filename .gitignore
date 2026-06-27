@@ -41,3 +41,6 @@ Thumbs.db
 
 # Docker
 *.local.yml
+
+# Deploy script (server-specific infra)
+deploy.sh
