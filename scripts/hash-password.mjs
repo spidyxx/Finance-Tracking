@@ -22,5 +22,8 @@ if (!password) {
 }
 
 const hash = await bcrypt.hash(password, ROUNDS);
-console.log(hash);
-console.error("\nSet this as APP_PASSWORD_HASH in your .env");
+// base64-encode so the hash's `$` characters survive Next's dotenv-expand
+// env loading (a raw bcrypt hash in .env gets mangled). The login route decodes.
+const encoded = Buffer.from(hash).toString("base64");
+console.log(encoded);
+console.error("\nSet this (base64-encoded bcrypt hash) as APP_PASSWORD_HASH in your .env");
