@@ -1,6 +1,7 @@
 import { listCategories } from "@/services/categories";
 import { CategoryForm } from "@/components/categories/category-form";
 import { CategoryActions } from "@/components/categories/category-actions";
+import { CategoryEditDialog } from "@/components/categories/category-edit-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -105,7 +106,14 @@ function CategoryRow({
           </span>
         )}
       </div>
-      <CategoryActions id={category.id} archived={category.archived} />
+      <div className="flex items-center gap-2">
+        <CategoryEditDialog
+          id={category.id}
+          name={category.name}
+          color={category.color}
+        />
+        <CategoryActions id={category.id} archived={category.archived} />
+      </div>
     </div>
   );
 }
