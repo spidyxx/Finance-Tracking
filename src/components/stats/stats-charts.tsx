@@ -99,17 +99,39 @@ export function StatsCharts({ data }: { data: StatsData }) {
         {pie.length === 0 ? (
           <p className="text-sm text-gray-400">No expenses in this range.</p>
         ) : (
-          <ResponsiveContainer width="100%" height={260}>
-            <PieChart>
-              <Pie data={pie} dataKey="value" nameKey="name" innerRadius={55} outerRadius={95}>
-                {pie.map((p, i) => (
-                  <Cell key={i} fill={p.fill} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(v) => tip(Number(v))} />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
+          <>
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie
+                  data={pie}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={55}
+                  outerRadius={95}
+                  paddingAngle={1}
+                >
+                  {pie.map((p, i) => (
+                    <Cell key={i} fill={p.fill} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v) => tip(Number(v))} />
+              </PieChart>
+            </ResponsiveContainer>
+            {/* Custom legend below the chart so many categories wrap freely
+                instead of overflowing into / clipping the donut. */}
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+              {pie.map((p, i) => (
+                <span key={i} className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
+                    style={{ backgroundColor: p.fill }}
+                  />
+                  <span className="text-gray-700">{p.name}</span>
+                  <span className="text-gray-400">{eur.format(p.value)}</span>
+                </span>
+              ))}
+            </div>
+          </>
         )}
       </Card>
 
