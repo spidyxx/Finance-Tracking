@@ -38,6 +38,7 @@ model Account {
   name         String          @unique // "Girokonto", "Tagesgeldkonto"
   openingCents Int             @default(0)
   archived     Boolean         @default(false)
+  position     Int             @default(0) // manual sort order (lower = first)
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   entries      Entry[]

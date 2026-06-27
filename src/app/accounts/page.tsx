@@ -2,6 +2,7 @@ import { listAccountsWithBalances } from "@/services/accounts";
 import { formatEuros } from "@/lib/money";
 import { AccountForm } from "@/components/accounts/account-form";
 import { ArchiveButton } from "@/components/accounts/account-actions";
+import { AccountMoveButtons } from "@/components/accounts/account-move-buttons";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,14 @@ export default async function AccountsPage() {
             No accounts yet. Add your first one above.
           </p>
         ) : (
-          active.map((a) => <AccountRow key={a.id} account={a} />)
+          active.map((a, i) => (
+            <AccountRow
+              key={a.id}
+              account={a}
+              first={i === 0}
+              last={i === active.length - 1}
+            />
+          ))
         )}
       </section>
 
@@ -40,16 +48,30 @@ export default async function AccountsPage() {
 
 function AccountRow({
   account,
+  first,
+  last,
 }: {
   account: Awaited<ReturnType<typeof listAccountsWithBalances>>[number];
+  first?: boolean;
+  last?: boolean;
 }) {
+  const sortable = first !== undefined; // active rows pass first/last
   return (
     <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3">
-      <div className="min-w-0">
-        <p className="truncate font-medium">{account.name}</p>
-        <p className="text-xs text-gray-500">
-          Opening {formatEuros(account.openingCents)}
-        </p>
+      <div className="flex min-w-0 items-center gap-2">
+        {sortable && (
+          <AccountMoveButtons
+            id={account.id}
+            first={!!first}
+            last={!!last}
+          />
+        )}
+        <div className="min-w-0">
+          <p className="truncate font-medium">{account.name}</p>
+          <p className="text-xs text-gray-500">
+            Opening {formatEuros(account.openingCents)}
+          </p>
+        </div>
       </div>
       <div className="flex items-center gap-3">
         <span

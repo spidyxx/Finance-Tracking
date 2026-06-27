@@ -1,5 +1,6 @@
 import { Flow } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { ServiceError } from "@/lib/errors";
 import { eurosToCents } from "@/lib/money";
 import type { CreateAccountInput, UpdateAccountInput } from "@/schemas/account";
 
@@ -21,7 +22,7 @@ export async function listAccountsWithBalances(
 ): Promise<AccountWithBalance[]> {
   const accounts = await prisma.account.findMany({
     where: includeArchived ? {} : { archived: false },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ position: "asc" }, { createdAt: "asc" }],
   });
 
   const sums = await prisma.entry.groupBy({
@@ -68,6 +69,28 @@ export async function updateAccount(id: string, input: UpdateAccountInput) {
       ...(input.archived !== undefined ? { archived: input.archived } : {}),
     },
   });
+}
+
+/** Move an active account up or down one slot, renormalizing positions. */
+export async function moveAccount(id: string, direction: "up" | "down") {
+  const accounts = await prisma.account.findMany({
+    where: { archived: false },
+    orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+    select: { id: true },
+  });
+  const idx = accounts.findIndex((a) => a.id === id);
+  if (idx === -1) throw new ServiceError("Account not found.", 404);
+  const swap = direction === "up" ? idx - 1 : idx + 1;
+  if (swap < 0 || swap >= accounts.length) return; // already at the edge
+
+  const ids = accounts.map((a) => a.id);
+  [ids[idx], ids[swap]] = [ids[swap], ids[idx]];
+  // Write dense positions 0..n in their new order (also normalizes legacy 0s).
+  await prisma.$transaction(
+    ids.map((aid, i) =>
+      prisma.account.update({ where: { id: aid }, data: { position: i } }),
+    ),
+  );
 }
 
 /** id -> name for all accounts (incl. archived), for counterparty display. */
