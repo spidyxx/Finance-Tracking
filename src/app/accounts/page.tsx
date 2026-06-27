@@ -3,6 +3,7 @@ import { formatEuros } from "@/lib/money";
 import { AccountForm } from "@/components/accounts/account-form";
 import { ArchiveButton } from "@/components/accounts/account-actions";
 import { AccountMoveButtons } from "@/components/accounts/account-move-buttons";
+import { AccountEditDialog } from "@/components/accounts/account-edit-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +84,11 @@ function AccountRow({
         >
           {formatEuros(account.balanceCents)}
         </span>
+        <AccountEditDialog
+          id={account.id}
+          name={account.name}
+          openingCents={account.openingCents}
+        />
         <ArchiveButton id={account.id} archived={account.archived} />
       </div>
     </div>
