@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { updateTransferSchema } from "@/schemas/transfer";
 import { deleteTransfer, updateTransfer } from "@/services/transfers";
-import { errorResponse } from "@/lib/errors";
+import { errorResponse } from "@/lib/api-errors";
 
 export async function PATCH(
   req: Request,

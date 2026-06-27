@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { updateRecurringSchema } from "@/schemas/recurring";
 import { deleteRule, updateRule } from "@/services/recurring";
-import { errorResponse } from "@/lib/errors";
+import { errorResponse } from "@/lib/api-errors";
 
 export async function PATCH(
   req: Request,

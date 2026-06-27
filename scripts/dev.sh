@@ -5,6 +5,7 @@
 #   scripts/dev.sh dev                # next dev on http://0.0.0.0:3000 (LAN)
 #   scripts/dev.sh build              # next build
 #   scripts/dev.sh prisma <args...>   # e.g. prisma migrate dev --name init
+#   scripts/dev.sh mcp                # run the MCP server on 0.0.0.0:3001 (LAN)
 #   scripts/dev.sh npm <args...>      # arbitrary npm command
 #   scripts/dev.sh exec <cmd...>      # arbitrary command in the container
 #   scripts/dev.sh shell              # interactive shell
@@ -51,6 +52,9 @@ case "$cmd" in
     ;;
   prisma)
     run "$DEV_IMAGE" sh -c 'npx prisma "$@"' _ "$@"
+    ;;
+  mcp)
+    run -p 3001:3001 "$DEV_IMAGE" sh -c 'npx tsx mcp/server.ts'
     ;;
   npm)
     run "$DEV_IMAGE" npm "$@"

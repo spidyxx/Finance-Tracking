@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createEntrySchema, entryFilterSchema } from "@/schemas/entry";
 import { createEntry, listEntries } from "@/services/entries";
-import { errorResponse } from "@/lib/errors";
+import { errorResponse } from "@/lib/api-errors";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);

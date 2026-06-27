@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createTransferSchema } from "@/schemas/transfer";
 import { createTransfer } from "@/services/transfers";
-import { errorResponse } from "@/lib/errors";
+import { errorResponse } from "@/lib/api-errors";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);

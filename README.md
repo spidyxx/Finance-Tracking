@@ -28,6 +28,12 @@ Generate the login password hash:
 scripts/dev.sh npm run hash-password -- "your-password"   # -> APP_PASSWORD_HASH
 ```
 
+Run the MCP server (LAN-only, port 3001, bearer `MCP_API_KEY`):
+
+```bash
+scripts/dev.sh mcp        # Streamable HTTP at http://<host>:3001/mcp
+```
+
 If you do have Node installed locally, the usual `npm run dev` / `npm run
 db:migrate` / `npm run build` scripts work too.
 
@@ -39,10 +45,14 @@ Postgres network and does **not** start its own database).
 
 ```bash
 podman build -t finance-tracker:latest .
+podman build -t finance-tracker-mcp:latest -f Dockerfile.mcp .   # MCP server
 ```
 
-Migrations are applied automatically on container start (`prisma migrate
-deploy`, see [docker-entrypoint.sh](docker-entrypoint.sh)).
+The web app and the MCP server run as two containers (see compose); both talk
+to the same database. The web container runs the recurring scheduler.
+
+Migrations are applied automatically on the web container's start (`prisma
+migrate deploy`, see [docker-entrypoint.sh](docker-entrypoint.sh)).
 
 Everything is LAN-only; off-site access is via WireGuard. Nothing is exposed to
 the internet.

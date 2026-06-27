@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { updateEntrySchema } from "@/schemas/entry";
 import { deleteEntry, updateEntry } from "@/services/entries";
-import { errorResponse } from "@/lib/errors";
+import { errorResponse } from "@/lib/api-errors";
 
 export async function PATCH(
   req: Request,

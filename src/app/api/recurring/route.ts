@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createRecurringSchema } from "@/schemas/recurring";
 import { createRule, listRules } from "@/services/recurring";
-import { errorResponse } from "@/lib/errors";
+import { errorResponse } from "@/lib/api-errors";
 
 export async function GET() {
   const rules = await listRules();

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { updateCategorySchema } from "@/schemas/category";
 import { deleteCategory, updateCategory } from "@/services/categories";
-import { errorResponse } from "@/lib/errors";
+import { errorResponse } from "@/lib/api-errors";
 
 export async function PATCH(
   req: Request,

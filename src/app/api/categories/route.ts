@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createCategorySchema } from "@/schemas/category";
 import { createCategory, listCategories } from "@/services/categories";
-import { errorResponse } from "@/lib/errors";
+import { errorResponse } from "@/lib/api-errors";
 
 export async function GET() {
   const categories = await listCategories(true);
