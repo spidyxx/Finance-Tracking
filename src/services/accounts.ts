@@ -69,3 +69,11 @@ export async function updateAccount(id: string, input: UpdateAccountInput) {
     },
   });
 }
+
+/** id -> name for all accounts (incl. archived), for counterparty display. */
+export async function getAccountNameMap(): Promise<Record<string, string>> {
+  const accounts = await prisma.account.findMany({
+    select: { id: true, name: true },
+  });
+  return Object.fromEntries(accounts.map((a) => [a.id, a.name]));
+}

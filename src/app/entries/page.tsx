@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { listEntries, type EntryListItem } from "@/services/entries";
 import { listCategories } from "@/services/categories";
-import { listAccountsWithBalances } from "@/services/accounts";
+import {
+  listAccountsWithBalances,
+  getAccountNameMap,
+} from "@/services/accounts";
 import { entryFilterSchema } from "@/schemas/entry";
 import { formatEuros } from "@/lib/money";
 import { formatDate, toISODate } from "@/lib/date";
@@ -10,6 +13,8 @@ import {
   type CategoryOption,
 } from "@/components/entries/entry-dialog";
 import { EntryDeleteButton } from "@/components/entries/entry-delete-button";
+import { TransferDialog } from "@/components/transfers/transfer-dialog";
+import { TransferDeleteButton } from "@/components/transfers/transfer-delete-button";
 
 export const dynamic = "force-dynamic";
 
@@ -35,13 +40,15 @@ export default async function EntriesPage({
   }
   const filter = entryFilterSchema.parse(cleaned);
 
-  const [{ items, total }, categories, accounts] = await Promise.all([
+  const [{ items, total }, categories, accounts, nameMap] = await Promise.all([
     listEntries(filter),
     listCategories(false),
     listAccountsWithBalances(false),
+    getAccountNameMap(),
   ]);
 
   const accountOptions = accounts.map((a) => ({ id: a.id, name: a.name }));
+  const canTransfer = accountOptions.length >= 2;
   const categoryOptions: CategoryOption[] = categories.map((c) => ({
     id: c.id,
     name: c.name,
@@ -57,13 +64,18 @@ export default async function EntriesPage({
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Entries</h1>
-        {ready && (
-          <EntryDialog
-            mode="create"
-            accounts={accountOptions}
-            categories={categoryOptions}
-          />
-        )}
+        <div className="flex gap-2">
+          {canTransfer && (
+            <TransferDialog mode="create" accounts={accountOptions} />
+          )}
+          {ready && (
+            <EntryDialog
+              mode="create"
+              accounts={accountOptions}
+              categories={categoryOptions}
+            />
+          )}
+        </div>
       </div>
 
       {!ready && (
@@ -204,7 +216,11 @@ export default async function EntriesPage({
                     </td>
                     <td className="px-3 py-2">
                       {isTransfer ? (
-                        <span className="text-gray-500">Transfer</span>
+                        <span className="text-gray-500">
+                          Transfer {isIncome ? "←" : "→"}{" "}
+                          {(e.counterpartyId && nameMap[e.counterpartyId]) ??
+                            "—"}
+                        </span>
                       ) : (
                         categoryLabel(e)
                       )}
@@ -223,26 +239,53 @@ export default async function EntriesPage({
                       {formatEuros(e.amountCents)}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-right">
-                      {!isTransfer && (
-                        <div className="flex justify-end gap-2">
-                          <EntryDialog
-                            mode="edit"
-                            accounts={accountOptions}
-                            categories={categoryOptions}
-                            triggerClassName="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
-                            initial={{
-                              id: e.id,
-                              date: toISODate(e.date),
-                              amountEuros: e.amountCents / 100,
-                              type: e.type as "Income" | "Expense",
-                              accountId: e.accountId,
-                              categoryId: e.categoryId ?? "",
-                              details: e.details,
-                            }}
-                          />
-                          <EntryDeleteButton id={e.id} />
-                        </div>
-                      )}
+                      <div className="flex justify-end gap-2">
+                        {isTransfer ? (
+                          e.transferGroupId && (
+                            <>
+                              <TransferDialog
+                                mode="edit"
+                                accounts={accountOptions}
+                                triggerClassName="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
+                                initial={{
+                                  groupId: e.transferGroupId,
+                                  date: toISODate(e.date),
+                                  amountEuros: e.amountCents / 100,
+                                  fromAccountId: isIncome
+                                    ? (e.counterpartyId ?? "")
+                                    : e.accountId,
+                                  toAccountId: isIncome
+                                    ? e.accountId
+                                    : (e.counterpartyId ?? ""),
+                                  details: e.details,
+                                }}
+                              />
+                              <TransferDeleteButton
+                                groupId={e.transferGroupId}
+                              />
+                            </>
+                          )
+                        ) : (
+                          <>
+                            <EntryDialog
+                              mode="edit"
+                              accounts={accountOptions}
+                              categories={categoryOptions}
+                              triggerClassName="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
+                              initial={{
+                                id: e.id,
+                                date: toISODate(e.date),
+                                amountEuros: e.amountCents / 100,
+                                type: e.type as "Income" | "Expense",
+                                accountId: e.accountId,
+                                categoryId: e.categoryId ?? "",
+                                details: e.details,
+                              }}
+                            />
+                            <EntryDeleteButton id={e.id} />
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
