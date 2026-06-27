@@ -400,6 +400,12 @@ services:
 - Dashboard shows an **upcoming recurring** preview (next 30 days).
 
 **Future enhancements**
+- **Investment / ETF valuation** — a `Valuation` entry type (or asset-account
+  flag) that adjusts an account's balance and counts toward net worth but is
+  **excluded from income/expense** (the way transfers are). Manual revaluation
+  only (no price feed; LAN-only). Lets the net-worth graph reflect market swings
+  while spending stats stay clean. (Workaround today: an ETF account with dated
+  income/expense "gain/loss" adjustment entries under dedicated categories.)
 - Budgets per category + over-budget alerts.
 - CSV/bank import & export.
 - Multi-currency.
