@@ -45,12 +45,16 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 export function StatsCharts({ data }: { data: StatsData }) {
   const gran = data.granularity;
   const nw = data.netWorth.map((d) => ({ period: fmtPeriod(d.period, gran), v: c(d.cents) }));
-  const ie = data.incomeExpense.map((d) => ({
-    month: fmtMonth(d.month),
-    income: c(d.incomeCents),
-    expense: c(d.expenseCents),
-    net: c(d.netCents),
-  }));
+  let netRun = 0;
+  const ie = data.incomeExpense.map((d) => {
+    netRun += c(d.netCents); // cumulative running net across the range
+    return {
+      month: fmtMonth(d.month),
+      income: c(d.incomeCents),
+      expense: c(d.expenseCents),
+      net: netRun,
+    };
+  });
   const accts = data.accountSeries.map((row) => {
     const o: Record<string, number | string> = { period: fmtPeriod(String(row.period), gran) };
     for (const name of data.accountNames) o[name] = c(Number(row[name] ?? 0));
@@ -86,7 +90,7 @@ export function StatsCharts({ data }: { data: StatsData }) {
             <Legend />
             <Bar dataKey="income" name="Income" fill="#16a34a" />
             <Bar dataKey="expense" name="Expenses" fill="#dc2626" />
-            <Line type="monotone" dataKey="net" name="Net" stroke="#111827" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="net" name="Net (cumulative)" stroke="#111827" strokeWidth={2} dot={false} />
           </ComposedChart>
         </ResponsiveContainer>
       </Card>
