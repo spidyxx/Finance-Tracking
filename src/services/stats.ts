@@ -1,7 +1,10 @@
 import { EntryType, Flow } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { toISODate } from "@/lib/date";
 
-// All dates UTC. Buckets are calendar months ("YYYY-MM").
+// All dates UTC. Net worth / per-account use day or month buckets (adaptive);
+// income/expense is always per calendar month.
+const DAY = 86_400_000;
 
 function monthKey(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
@@ -23,12 +26,24 @@ function monthsBetween(from: Date, to: Date): string[] {
   return out;
 }
 
+function startOfDay(d: Date): number {
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+function daysBetween(from: Date, to: Date): string[] {
+  const out: string[] = [];
+  for (let t = startOfDay(from); t <= startOfDay(to); t += DAY) {
+    out.push(toISODate(new Date(t)));
+  }
+  return out;
+}
+
 export type StatsData = {
-  months: string[];
+  granularity: "day" | "month";
+  periods: string[]; // keys for net worth / per-account
   accountNames: string[];
-  // [{ month, <accountName>: balanceCents, ... }]
-  accountSeries: Record<string, number | string>[];
-  netWorth: { month: string; cents: number }[];
+  accountSeries: Record<string, number | string>[]; // [{ period, <name>: cents }]
+  netWorth: { period: string; cents: number }[];
   incomeExpense: {
     month: string;
     incomeCents: number;
@@ -39,8 +54,13 @@ export type StatsData = {
 };
 
 export async function getStats(from: Date, to: Date): Promise<StatsData> {
-  const months = monthsBetween(from, to);
-  const fromKey = months[0] ?? monthKey(from);
+  const spanDays = Math.floor((startOfDay(to) - startOfDay(from)) / DAY) + 1;
+  const granularity: "day" | "month" = spanDays <= 400 ? "day" : "month";
+  const periods =
+    granularity === "day" ? daysBetween(from, to) : monthsBetween(from, to);
+  const keyOf = (d: Date) =>
+    granularity === "day" ? toISODate(d) : monthKey(d);
+  const fromKey = periods[0] ?? keyOf(from);
 
   const accounts = await prisma.account.findMany({
     where: { archived: false },
@@ -54,39 +74,42 @@ export async function getStats(from: Date, to: Date): Promise<StatsData> {
     select: { accountId: true, date: true, flow: true, amountCents: true },
   });
 
-  // Per-account: baseline (opening + everything before the range) + monthly deltas.
+  // Per-account: baseline (opening + everything before the range) + per-bucket deltas.
   const baseline = new Map<string, number>();
-  const monthly = new Map<string, Map<string, number>>();
+  const perBucket = new Map<string, Map<string, number>>();
   for (const a of accounts) {
     baseline.set(a.id, a.openingCents);
-    monthly.set(a.id, new Map());
+    perBucket.set(a.id, new Map());
   }
   for (const e of entries) {
     const signed = (e.flow === Flow.In ? 1 : -1) * e.amountCents;
-    const k = monthKey(e.date);
+    const k = keyOf(e.date);
     if (k < fromKey) {
       baseline.set(e.accountId, (baseline.get(e.accountId) ?? 0) + signed);
     } else {
-      const mm = monthly.get(e.accountId);
-      if (mm) mm.set(k, (mm.get(k) ?? 0) + signed);
+      perBucket.get(e.accountId)?.set(
+        k,
+        (perBucket.get(e.accountId)?.get(k) ?? 0) + signed,
+      );
     }
   }
 
-  const accountSeries: Record<string, number | string>[] = months.map((m) => ({
-    month: m,
+  const accountSeries: Record<string, number | string>[] = periods.map((k) => ({
+    period: k,
   }));
-  const netWorth = months.map((m) => ({ month: m, cents: 0 }));
+  const netWorth = periods.map((k) => ({ period: k, cents: 0 }));
   for (const a of accounts) {
     let running = baseline.get(a.id) ?? 0;
-    const mm = monthly.get(a.id);
-    months.forEach((m, i) => {
-      running += mm?.get(m) ?? 0;
+    const mm = perBucket.get(a.id);
+    periods.forEach((k, i) => {
+      running += mm?.get(k) ?? 0;
       accountSeries[i][a.name] = running;
       netWorth[i].cents += running;
     });
   }
 
-  // Income vs expense per month (transfers excluded by type filter).
+  // Income vs expense — always per calendar month (transfers excluded).
+  const months = monthsBetween(from, to);
   const ie = await prisma.entry.findMany({
     where: {
       type: { in: [EntryType.Income, EntryType.Expense] },
@@ -138,7 +161,8 @@ export async function getStats(from: Date, to: Date): Promise<StatsData> {
     .sort((a, b) => b.cents - a.cents);
 
   return {
-    months,
+    granularity,
+    periods,
     accountNames: accounts.map((a) => a.name),
     accountSeries,
     netWorth,

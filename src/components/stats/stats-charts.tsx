@@ -21,22 +21,17 @@ const PALETTE = [
   "#2563eb", "#16a34a", "#dc2626", "#d97706", "#7c3aed",
   "#0891b2", "#db2777", "#65a30d", "#ca8a04", "#0d9488",
 ];
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const eur = new Intl.NumberFormat("de-DE", {
-  style: "currency",
-  currency: "EUR",
-  maximumFractionDigits: 0,
-});
-const eur2 = new Intl.NumberFormat("de-DE", {
-  style: "currency",
-  currency: "EUR",
-});
+const eur = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+const eur2 = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
 const c = (cents: number) => cents / 100;
-const fmtMonth = (m: string) => {
-  const [y, mo] = m.split("-");
-  return `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][+mo - 1]} ${y.slice(2)}`;
-};
 const tip = (v: number) => eur2.format(v);
+const fmtMonth = (m: string) => `${MON[+m.split("-")[1] - 1]} ${m.split("-")[0].slice(2)}`;
+const fmtPeriod = (key: string, gran: "day" | "month") => {
+  const parts = key.split("-");
+  return gran === "day" ? `${parts[2]}.${parts[1]}` : fmtMonth(key);
+};
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -48,7 +43,8 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 export function StatsCharts({ data }: { data: StatsData }) {
-  const nw = data.netWorth.map((d) => ({ month: fmtMonth(d.month), v: c(d.cents) }));
+  const gran = data.granularity;
+  const nw = data.netWorth.map((d) => ({ period: fmtPeriod(d.period, gran), v: c(d.cents) }));
   const ie = data.incomeExpense.map((d) => ({
     month: fmtMonth(d.month),
     income: c(d.incomeCents),
@@ -56,7 +52,7 @@ export function StatsCharts({ data }: { data: StatsData }) {
     net: c(d.netCents),
   }));
   const accts = data.accountSeries.map((row) => {
-    const o: Record<string, number | string> = { month: fmtMonth(String(row.month)) };
+    const o: Record<string, number | string> = { period: fmtPeriod(String(row.period), gran) };
     for (const name of data.accountNames) o[name] = c(Number(row[name] ?? 0));
     return o;
   });
@@ -72,7 +68,7 @@ export function StatsCharts({ data }: { data: StatsData }) {
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={nw} margin={{ left: 8, right: 8, top: 4 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-            <XAxis dataKey="month" fontSize={11} />
+            <XAxis dataKey="period" fontSize={11} minTickGap={40} />
             <YAxis tickFormatter={(v) => eur.format(v)} width={70} fontSize={11} />
             <Tooltip formatter={(v) => tip(Number(v))} />
             <Line type="monotone" dataKey="v" name="Net worth" stroke="#2563eb" strokeWidth={2} dot={false} />
@@ -102,14 +98,7 @@ export function StatsCharts({ data }: { data: StatsData }) {
           <>
             <ResponsiveContainer width="100%" height={240}>
               <PieChart>
-                <Pie
-                  data={pie}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={55}
-                  outerRadius={95}
-                  paddingAngle={1}
-                >
+                <Pie data={pie} dataKey="value" nameKey="name" innerRadius={55} outerRadius={95} paddingAngle={1}>
                   {pie.map((p, i) => (
                     <Cell key={i} fill={p.fill} />
                   ))}
@@ -117,15 +106,10 @@ export function StatsCharts({ data }: { data: StatsData }) {
                 <Tooltip formatter={(v) => tip(Number(v))} />
               </PieChart>
             </ResponsiveContainer>
-            {/* Custom legend below the chart so many categories wrap freely
-                instead of overflowing into / clipping the donut. */}
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
               {pie.map((p, i) => (
                 <span key={i} className="flex items-center gap-1.5">
-                  <span
-                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
-                    style={{ backgroundColor: p.fill }}
-                  />
+                  <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: p.fill }} />
                   <span className="text-gray-700">{p.name}</span>
                   <span className="text-gray-400">{eur.format(p.value)}</span>
                 </span>
@@ -139,7 +123,7 @@ export function StatsCharts({ data }: { data: StatsData }) {
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={accts} margin={{ left: 8, right: 8, top: 4 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-            <XAxis dataKey="month" fontSize={11} />
+            <XAxis dataKey="period" fontSize={11} minTickGap={40} />
             <YAxis tickFormatter={(v) => eur.format(v)} width={70} fontSize={11} />
             <Tooltip formatter={(v) => tip(Number(v))} />
             <Legend />
