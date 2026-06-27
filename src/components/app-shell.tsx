@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Nav } from "@/components/nav";
 import { LogoutButton } from "@/components/logout-button";
+import { APP_VERSION } from "@/version";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -15,8 +16,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="hidden border-r border-gray-200 bg-white md:flex md:w-56 md:flex-col">
         <div className="px-5 py-4 text-lg font-semibold">💶 Finance</div>
         <Nav className="px-2" />
-        <div className="mt-auto p-3">
+        <div className="mt-auto flex items-center justify-between gap-2 p-3">
           <LogoutButton />
+          <span className="text-xs text-gray-400">v{APP_VERSION}</span>
         </div>
       </aside>
       <div className="flex-1">
